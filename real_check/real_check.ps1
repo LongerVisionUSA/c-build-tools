@@ -70,7 +70,13 @@ function Check-Symbols {
         return $return_code
 }
 
-exit (Check-Symbols -lib $args[0])
+ForEach($lib in $args){
+    $exit_code = Check-Symbols -lib $lib
+    if($exit_code -ne 0){
+        exit $exit_code
+    }
+}
+exit 0
 
 <#
 .SYNOPSIS
