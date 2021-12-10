@@ -209,17 +209,38 @@ endfunction()
 # variable to store list of libs that must be checked for reals
 set(LIBS_TO_BE_REAL_CHECKED CACHE INTERNAL "LIBS_TO_BE_CHECKED")
 
+function(add_link_repro theTarget)
+  target_link_options(${theTarget} PRIVATE /linkrepro:d:\\w\\store\\cmake\\linkrepro\\${theTarget})
+  add_custom_command(TARGET ${theTarget}
+    PRE_BUILD
+    COMMAND if not exist d:\\w\\store\\cmake\\linkrepro\\${theTarget} mkdir d:\\w\\store\\cmake\\linkrepro\\${theTarget}
+    DEPENDS ${theTarget}
+    VERBATIM
+)
+endfunction()
+
 # overloading the add_library function to store name of library if it meets criteria
 # overloading is not officially supported, solution was found here: https://stackoverflow.com/a/55723415/10144036
 function (add_library())
     _add_library(${ARGV})
     get_target_property(lib_type ${ARGV0} TYPE)
+    get_target_property(is_lib_imported ${ARGV0} IMPORTED)
+    if ((NOT ${lib_type} STREQUAL "INTERFACE_LIBRARY") AND # ignore interface libs
+        (NOT ${is_lib_imported}))
+        add_link_repro(${ARGV0})
+    endif()
     if( (NOT ${CMAKE_CURRENT_LIST_DIR} MATCHES "/deps/") AND # ignore dependency libs
         (NOT ${ARGV0} MATCHES "_(ut|int|perf)_lib|dll") AND # ignore test libs and all dlls
         (NOT ${lib_type} STREQUAL "INTERFACE_LIBRARY")) # ignore interface libs
         # appending lib to LIBS_TO_BE_REAL_CHECKED
         set(LIBS_TO_BE_REAL_CHECKED "${LIBS_TO_BE_REAL_CHECKED};${ARGV0}" CACHE INTERNAL "LIBS_TO_BE_CHECKED")
     endif()
+endfunction()
+
+function (add_executable())
+    _add_executable(${ARGV})
+    get_target_property(lib_type ${ARGV0} TYPE)
+    add_link_repro(${ARGV0})
 endfunction()
 
 # signature: get_target_files(var [list of targets])
